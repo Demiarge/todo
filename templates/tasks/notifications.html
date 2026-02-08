@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Notifications – Task Manager{% endblock %}
+{% block content %}
+<h1 class="page-title" style="margin-top: 0;">Notifications</h1>
+{% for n in notifications %}
+<div class="card" style="{% if not n.is_read %}border-left: 3px solid var(--primary);{% endif %}">
+  {% if n.task %}
+  <a href="{% url 'tasks:task_detail' n.task.slug %}" class="stretched-link"></a>
+  {% endif %}
+  <p style="margin: 0;">{{ n.message }}</p>
+  <small style="color: var(--text-muted);">{{ n.created_at }}</small>
+  {% if not n.is_read %}
+  <div style="position: relative; z-index: 2; margin-top: 0.5rem;">
+    <a href="{% url 'tasks:notification_mark_read' n.pk %}?next={{ request.path }}" class="btn btn-ghost">Mark read</a>
+  </div>
+  {% endif %}
+</div>
+{% empty %}
+<p style="color: var(--text-muted);">No notifications.</p>
+{% endfor %}
+{% endblock %}

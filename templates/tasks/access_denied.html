@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Access Denied – Task Manager{% endblock %}
+{% block content %}
+<div class="card"
+    style="max-width: 600px; margin: 4rem auto; text-align: center; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); padding: 3rem;">
+    <div style="font-size: 5rem; margin-bottom: 2rem;">🛡️</div>
+    <h1 class="page-title" style="margin-bottom: 1rem; color: var(--primary);">Access Denied</h1>
+    <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 2rem;">
+        You don't have the required permissions to view or edit this task.
+        Please contact the task owner if you believe this is an error.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="{% url 'tasks:dashboard' %}" class="btn btn-primary" style="padding: 0.75rem 2rem;">Back to
+            Dashboard</a>
+        <a href="javascript:history.back()" class="btn btn-secondary" style="padding: 0.75rem 2rem;">Go Back</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Home – Task Manager{% endblock %}
+{% block content %}
+<div class="card" style="text-align: center; padding: 4rem 2rem;">
+  <h1 class="page-title" style="font-size: 2.25rem; margin-bottom: 0.75rem;">Collaborative Task Manager</h1>
+  <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 420px; margin: 0 auto 2rem;">Manage your tasks and collaborate with others. Create tasks, assign them to teammates, and track progress.</p>
+  <p style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+    <a href="{% url 'tasks:login' %}" class="btn btn-primary">Log in</a>
+    <a href="{% url 'tasks:register' %}" class="btn btn-secondary">Register</a>
+  </p>
+</div>
+{% endblock %}

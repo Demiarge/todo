@@ -1,0 +1,155 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Task Manager{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+  <nav class="navbar">
+    <a href="{% url 'tasks:home' %}" class="navbar-brand">What to do</a>
+    <div class="nav-links">
+      {% if user.is_authenticated %}
+      <a href="{% url 'tasks:dashboard' %}">Dashboard</a>
+      <a href="{% url 'tasks:notifications' %}">
+        Notifications{% if unread_notification_count %}<span class="notification-badge">{{ unread_notification_count }}</span>{% endif %}
+      </a>
+      <div class="nav-user">
+        <a href="{% url 'tasks:profile' %}" title="{{ user.username }}">
+          {% if user_profile.avatar %}
+          <img src="{{ user_profile.avatar.url }}" alt="{{ user.username }}" class="nav-avatar">
+          {% else %}
+          <div class="nav-avatar-placeholder">{{ user.username|slice:":1"|upper }}</div>
+          {% endif %}
+        </a>
+        <a href="{% url 'tasks:logout' %}" class="btn btn-ghost">Logout</a>
+      </div>
+      {% else %}
+      <a href="{% url 'tasks:login' %}">Login</a>
+      <a href="{% url 'tasks:register' %}">Register</a>
+      {% endif %}
+    </div>
+  </nav>
+  <div class="notification-popup-container" id="notificationPopupContainer"></div>
+  <main class="container">
+    {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+      <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  {% if user.is_authenticated %}
+  <script>
+    // Notification Popup System
+    let lastNotificationId = localStorage.getItem('lastNotificationId') || 0;
+    let notificationCheckInterval = 10000; // Check every 10 seconds
+
+    function showNotificationPopup(notification) {
+      const container = document.getElementById('notificationPopupContainer');
+      const popup = document.createElement('div');
+      popup.className = 'notification-popup';
+      popup.innerHTML = `
+        <div class="notification-popup-icon">🔔</div>
+        <div class="notification-popup-content">
+          <p class="notification-popup-message">${notification.message}</p>
+          <div class="notification-popup-time">${notification.time}</div>
+        </div>
+      `;
+
+      // Click to navigate to task or dismiss
+      popup.addEventListener('click', () => {
+        if (notification.task_id) {
+          window.location.href = `/task/${notification.task_id}/`;
+        } else {
+          popup.classList.add('hiding');
+          setTimeout(() => popup.remove(), 300);
+        }
+      });
+
+      // Add hover cursor if clickable
+      if (notification.task_id) {
+        popup.style.cursor = 'pointer';
+      }
+
+      container.appendChild(popup);
+
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => {
+        if (popup.parentElement) {
+          popup.classList.add('hiding');
+          setTimeout(() => popup.remove(), 300);
+        }
+      }, 5000);
+
+      // Update notification badge
+      updateNotificationBadge();
+    }
+
+    function updateNotificationBadge() {
+      fetch('/api/notifications/unread-count/')
+        .then(response => response.json())
+        .then(data => {
+          const badge = document.querySelector('.notification-badge');
+          const link = document.querySelector('a[href*="notifications"]');
+          if (data.count > 0) {
+            if (badge) {
+              badge.textContent = data.count;
+            } else if (link) {
+              const newBadge = document.createElement('span');
+              newBadge.className = 'notification-badge';
+              newBadge.textContent = data.count;
+              link.appendChild(newBadge);
+            }
+          } else if (badge) {
+            badge.remove();
+          }
+        })
+        .catch(err => console.error('Error updating badge:', err));
+    }
+
+    function checkForNewNotifications() {
+      fetch(`/api/notifications/latest/?since=${lastNotificationId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.notifications && data.notifications.length > 0) {
+            data.notifications.forEach(notification => {
+              showNotificationPopup(notification);
+              if (notification.id > lastNotificationId) {
+                lastNotificationId = notification.id;
+                localStorage.setItem('lastNotificationId', lastNotificationId);
+              }
+            });
+          }
+        })
+        .catch(err => console.error('Error checking notifications:', err));
+    }
+
+    // Start polling for new notifications
+    setInterval(checkForNewNotifications, notificationCheckInterval);
+
+    // Initial check on page load
+    setTimeout(checkForNewNotifications, 2000);
+
+    // If on notifications page, update badge after auto-mark-as-read
+    if (window.location.pathname.includes('/notifications/')) {
+      setTimeout(updateNotificationBadge, 500);
+    }
+  </script>
+  {% endif %}
+</body>
+
+</html>

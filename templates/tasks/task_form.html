@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} – Task Manager{% endblock %}
+{% block content %}
+<div class="card">
+  <h2 class="page-title" style="margin-top: 0;">{{ title }}</h2>
+  {% if form.non_field_errors %}
+    <div class="form-errors">{{ form.non_field_errors }}</div>
+  {% endif %}
+  <form method="post" action="" id="task-form">
+    {% csrf_token %}
+    {% for field in form %}
+      {% if field.name == 'assigned_usernames' %}
+        <label for="id_assigned_usernames">{{ field.label }}</label>
+        <small style="display: block; color: var(--text-muted); margin-bottom: 0.5rem;">Type to search users; click a suggestion to add.</small>
+        <div class="assignee-autocomplete" style="margin-bottom: 1rem;">
+          <input type="text" id="assignee-search" placeholder="Type username (e.g. z for zxcv)..." autocomplete="off" style="margin-bottom: 0.5rem;">
+          <input type="hidden" name="assigned_usernames" id="id_assigned_usernames" value="{{ field.value|default:'' }}">
+          <div id="assignee-suggestions" style="position: relative;"></div>
+          <div id="assignee-tags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;"></div>
+        </div>
+        {% if field.errors %}<div class="form-errors">{{ field.errors }}</div>{% endif %}
+      {% else %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {% if field.help_text %}<small style="color: var(--text-muted);">{{ field.help_text }}</small>{% endif %}
+        {{ field }}
+        {% if field.errors %}<div class="form-errors">{{ field.errors }}</div>{% endif %}
+      {% endif %}
+    {% endfor %}
+    <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+      <button type="submit" class="btn btn-primary">Save</button>
+      {% if task %}
+        <a href="{% url 'tasks:task_detail' task.pk %}" class="btn btn-secondary">Cancel</a>
+      {% else %}
+        <a href="{% url 'tasks:dashboard' %}" class="btn btn-secondary">Cancel</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<style>
+  .assignee-tag { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.6rem; background: var(--surface-hover); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; }
+  .assignee-tag button { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0 0.2rem; font-size: 1rem; line-height: 1; }
+  .assignee-tag button:hover { color: var(--error); }
+  #assignee-suggestions { min-height: 0; }
+  .suggestions-list { position: absolute; top: 0; left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); z-index: 10; max-height: 200px; overflow-y: auto; list-style: none; margin: 0; padding: 0.25rem 0; }
+  .suggestions-list li { padding: 0.5rem 0.875rem; cursor: pointer; font-size: 0.9rem; }
+  .suggestions-list li:hover { background: var(--surface-hover); }
+</style>
+<script>
+(function() {
+  const searchInput = document.getElementById('assignee-search');
+  const hiddenInput = document.getElementById('id_assigned_usernames');
+  const suggestionsEl = document.getElementById('assignee-suggestions');
+  const tagsEl = document.getElementById('assignee-tags');
+  const apiUrl = '{% url "tasks:user_search_api" %}';
+
+  let selected = [];
+  const initialVal = hiddenInput.value.trim();
+  if (initialVal) selected = initialVal.split(',').map(s => s.trim()).filter(Boolean);
+
+  let debounceTimer;
+  function fetchSuggestions(q) {
+    if (!q) { renderSuggestions([]); return; }
+    fetch(apiUrl + '?q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(data => {
+        const users = (data.users || []).filter(u => !selected.includes(u));
+        renderSuggestions(users);
+      })
+      .catch(() => renderSuggestions([]));
+  }
+
+  function renderSuggestions(users) {
+    if (users.length === 0) {
+      suggestionsEl.innerHTML = '';
+      return;
+    }
+    suggestionsEl.innerHTML = '<ul class="suggestions-list">' +
+      users.map(u => '<li data-username="' + u + '">' + u + '</li>').join('') + '</ul>';
+    suggestionsEl.querySelectorAll('li').forEach(li => {
+      li.addEventListener('click', () => {
+        selected.push(li.dataset.username);
+        syncHidden();
+        renderTags();
+        searchInput.value = '';
+        suggestionsEl.innerHTML = '';
+        searchInput.focus();
+      });
+    });
+  }
+
+  function renderTags() {
+    tagsEl.innerHTML = selected.map(u => 
+      '<span class="assignee-tag">' + u + ' <button type="button" data-username="' + u + '" aria-label="Remove">×</button></span>'
+    ).join('');
+    tagsEl.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selected = selected.filter(x => x !== btn.dataset.username);
+        syncHidden();
+        renderTags();
+      });
+    });
+  }
+
+  function syncHidden() {
+    hiddenInput.value = selected.join(', ');
+  }
+
+  searchInput.addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    const q = this.value.trim();
+    debounceTimer = setTimeout(() => fetchSuggestions(q), 200);
+  });
+  searchInput.addEventListener('focus', function() {
+    const q = this.value.trim();
+    if (q) fetchSuggestions(q);
+  });
+  searchInput.addEventListener('blur', function() {
+    setTimeout(() => { suggestionsEl.innerHTML = ''; }, 150);
+  });
+
+  renderTags();
+})();
+</script>
+{% endblock %}

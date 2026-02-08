@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Profile – Task Manager{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/file_upload.css' %}">
+{% endblock %}
+{% block content %}
+
+<h1 class="page-title">Profile Settings</h1>
+
+<div class="task-grid-section" style="grid-template-columns: 1fr 2fr; align-items: start;">
+
+  <!-- Sidebar / Profile Card -->
+  <div class="card" style="text-align: center;">
+    <div style="position: relative; display: inline-block; margin-bottom: 1rem;">
+      {% if profile.avatar %}
+      <img src="{{ profile.avatar.url }}" alt="{{ user.username }}" class="nav-avatar"
+        style="width: 120px; height: 120px; border-width: 4px;">
+      {% else %}
+      <div class="nav-avatar-placeholder" style="width: 120px; height: 120px; font-size: 3rem; margin: 0 auto;">
+        {{ user.username|slice:":1"|upper }}
+      </div>
+      {% endif %}
+    </div>
+    <h2 style="margin: 0; font-size: 1.5rem;">{{ user.username }}</h2>
+    <p style="color: var(--text-muted); margin-top: 0.5rem;">{{ user.email }}</p>
+
+    <div style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem; text-align: left;">
+      <small
+        style="text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Member
+        Since</small>
+      <p style="margin: 0.25rem 0;">{{ user.date_joined|date:"F j, Y" }}</p>
+    </div>
+  </div>
+
+  <!-- Edit Form -->
+  <div class="card">
+    <h2 style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">Edit Profile</h2>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      {% if u_form.errors or p_form.errors %}
+      <div
+        style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; padding: 1rem; border-radius: var(--radius); margin-bottom: 1.5rem;">
+        <p style="margin: 0; font-weight: 600;">Please correct the errors below.</p>
+      </div>
+      {% endif %}
+
+      <div style="display: grid; gap: 1.5rem;">
+        <!-- Personal Info -->
+        <h3 style="font-size: 1.1rem; color: var(--primary); margin: 0;">Personal Information</h3>
+
+        <!-- Username & Email -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <label for="{{ u_form.username.id_for_label }}">Username</label>
+            {{ u_form.username }}
+            {{ u_form.username.errors }}
+          </div>
+          <div>
+            <label for="{{ u_form.email.id_for_label }}">Email Address</label>
+            {{ u_form.email }}
+            {{ u_form.email.errors }}
+          </div>
+        </div>
+
+        <!-- First & Last Name -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <label for="{{ u_form.first_name.id_for_label }}">First Name</label>
+            {{ u_form.first_name }}
+          </div>
+          <div>
+            <label for="{{ u_form.last_name.id_for_label }}">Last Name</label>
+            {{ u_form.last_name }}
+          </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 0; width: 100%;">
+
+        <!-- Avatar -->
+        <h3 style="font-size: 1.1rem; color: var(--primary); margin: 0;">Avatar</h3>
+        <div class="file-upload-wrapper">
+          <label for="{{ p_form.avatar.id_for_label }}" class="file-upload-label">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Choose Image
+          </label>
+          {{ p_form.avatar }}
+          <div class="file-upload-preview" id="preview-container" style="display: none;">
+            <span class="file-name-display" id="file-name"></span>
+          </div>
+          {{ p_form.avatar.errors }}
+        </div>
+
+        <script>
+          const fileInput = document.getElementById('{{ p_form.avatar.id_for_label }}');
+          const fileNameDisplay = document.getElementById('file-name');
+          const previewContainer = document.getElementById('preview-container');
+
+          if (fileInput) {
+            fileInput.classList.add('file-upload-input'); // Hide original input
+            fileInput.addEventListener('change', function () {
+              if (this.files && this.files.length > 0) {
+                fileNameDisplay.textContent = this.files[0].name;
+                previewContainer.style.display = 'flex';
+              }
+            });
+          }
+        </script>
+
+        <div style="margin-top: 1rem; text-align: right;">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
